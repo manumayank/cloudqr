@@ -105,7 +105,8 @@ export async function createTestQRCode(
   overrides: Partial<{
     slug: string;
     qrUrl: string;
-    type: string;
+    codeType: string;
+    targetMode: string;
     isActive: boolean;
   }> = {},
 ) {
@@ -115,8 +116,9 @@ export async function createTestQRCode(
     data: {
       campaignId,
       slug,
-      qrUrl: overrides.qrUrl || `https://qr.test.com/r/${slug}`,
-      type: (overrides.type as any) || 'DYNAMIC',
+      qrUrl: overrides.qrUrl,
+      codeType: (overrides.codeType as any) || 'SINGLE_DYNAMIC',
+      targetMode: (overrides.targetMode as any) || 'DIRECT_LINK',
       isActive: overrides.isActive !== undefined ? overrides.isActive : true,
     },
   });
@@ -132,14 +134,20 @@ export async function createTestRedirectRule(
     targetUrl: string;
     priority: number;
     mode: string;
+    isDefault: boolean;
+    validFrom: Date;
+    validTo: Date;
   }> = {},
 ) {
   return prisma.redirectRule.create({
     data: {
       qrCodeId,
       targetUrl: overrides.targetUrl || 'https://example.com/landing',
-      priority: overrides.priority || 1,
+      priority: overrides.priority !== undefined ? overrides.priority : 1,
       mode: (overrides.mode as any) || 'ALWAYS',
+      isDefault: overrides.isDefault !== undefined ? overrides.isDefault : false,
+      validFrom: overrides.validFrom,
+      validTo: overrides.validTo,
     },
   });
 }
@@ -154,17 +162,37 @@ export async function createTestForm(
     title: string;
     description: string;
     fields: any;
+    isActive: boolean;
+    submitButtonText: string;
+    successMessage: string;
+    redirectUrl: string;
   }> = {},
 ) {
+  // Get campaign to extract businessId
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: { businessId: true },
+  });
+
+  if (!campaign) {
+    throw new Error('Campaign not found');
+  }
+
   return prisma.form.create({
     data: {
+      businessId: campaign.businessId,
       campaignId,
       title: overrides.title || 'Test Form',
       description: overrides.description || 'Test form description',
       fields: overrides.fields || [
-        { type: 'TEXT', label: 'Name', required: true, order: 1 },
-        { type: 'EMAIL', label: 'Email', required: true, order: 2 },
+        { label: 'Name', type: 'text', required: true },
+        { label: 'Email', type: 'email', required: true },
       ],
+      isActive: overrides.isActive !== undefined ? overrides.isActive : true,
+      submitButtonText: overrides.submitButtonText || 'Submit',
+      successMessage:
+        overrides.successMessage || 'Thank you! Your response has been recorded.',
+      redirectUrl: overrides.redirectUrl,
     },
   });
 }
@@ -175,22 +203,37 @@ export async function createTestForm(
 export async function createTestOrder(
   prisma: PrismaService,
   businessId: string,
+  campaignId: string,
   overrides: Partial<{
     orderNumber: string;
     productType: string;
     quantity: number;
     amount: number;
     status: string;
+    paymentStatus: string;
+    shippingAddress: string;
+    shippingCity: string;
+    shippingState: string;
+    shippingPincode: string;
+    notes: string;
   }> = {},
 ) {
   return prisma.order.create({
     data: {
       businessId,
+      campaignId,
       orderNumber: overrides.orderNumber || `ORD-${Date.now()}`,
-      productType: (overrides.productType as any) || 'STICKERS',
+      productType: (overrides.productType as any) || 'BUSINESS_CARD',
       quantity: overrides.quantity || 100,
       amount: overrides.amount || 50000,
+      currency: 'INR',
       status: (overrides.status as any) || 'PENDING',
+      paymentStatus: (overrides.paymentStatus as any) || 'PENDING',
+      shippingAddress: overrides.shippingAddress || 'Test Address',
+      shippingCity: overrides.shippingCity || 'Test City',
+      shippingState: overrides.shippingState || 'Test State',
+      shippingPincode: overrides.shippingPincode || '123456',
+      notes: overrides.notes,
     },
   });
 }
