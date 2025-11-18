@@ -41,7 +41,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     // Redis Cache
     CacheModule.register({
       isGlobal: true,
-      store: redisStore,
+      store: redisStore as any,
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT) || 6379,
       password: process.env.REDIS_PASSWORD,
@@ -49,10 +49,12 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     }),
 
     // Rate Limiting
-    ThrottlerModule.forRoot({
-      ttl: parseInt(process.env.RATE_LIMIT_TTL) || 60,
-      limit: parseInt(process.env.RATE_LIMIT_MAX) || 1000,
-    }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: parseInt(process.env.RATE_LIMIT_TTL) || 60000,
+        limit: parseInt(process.env.RATE_LIMIT_MAX) || 1000,
+      },
+    ]),
 
     // Bull Queue (Redis-based job queue)
     BullModule.forRoot({
