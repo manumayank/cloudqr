@@ -25,6 +25,10 @@ import { AdminModule } from './modules/admin/admin.module';
 // Workers
 import { WorkersModule } from './workers/workers.module';
 
+// Guards
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+
 @Module({
   imports: [
     // Configuration
@@ -77,6 +81,14 @@ import { WorkersModule } from './workers/workers.module';
 
     // Workers
     WorkersModule,
+  ],
+  providers: [
+    // Global JWT authentication guard
+    // Routes are protected by default, use @Public() decorator to make them public
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
 })
 export class AppModule {}
