@@ -34,7 +34,16 @@ AWS_ACCESS_KEY_ID="your_access_key"
 AWS_SECRET_ACCESS_KEY="your_secret_key"
 S3_BUCKET="qrconnect-assets"
 
+# Email (Optional - for notifications)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-app-password"
+FROM_EMAIL="noreply@qrconnect.in"
+FROM_NAME="QRConnect"
+
 # Application
+APP_URL="http://localhost:3000"
 QR_BASE_URL="http://localhost:3000"
 DEFAULT_CACHE_TTL=300
 RATE_LIMIT_TTL=60
@@ -475,6 +484,266 @@ curl -s -X GET "http://localhost:3000/api/analytics/campaigns/$CAMPAIGN_ID/summa
 
 echo "✓ End-to-end test completed"
 ```
+
+### 8. Forms Flow
+
+#### Create a Form
+
+```bash
+curl -X POST http://localhost:3000/api/forms \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "title": "Customer Feedback Form",
+    "description": "Help us improve our service",
+    "campaignId": "CAMPAIGN_ID",
+    "fields": [
+      {
+        "label": "Name",
+        "type": "TEXT",
+        "required": true,
+        "placeholder": "Enter your name"
+      },
+      {
+        "label": "Email",
+        "type": "EMAIL",
+        "required": true,
+        "placeholder": "your.email@example.com"
+      },
+      {
+        "label": "Rating",
+        "type": "RATING",
+        "required": true
+      },
+      {
+        "label": "Feedback",
+        "type": "TEXTAREA",
+        "required": false,
+        "placeholder": "Tell us what you think"
+      }
+    ],
+    "submitButtonText": "Submit Feedback",
+    "successMessage": "Thank you for your feedback!",
+    "redirectUrl": "https://yourwebsite.com/thanks"
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "id": "frm_...",
+  "title": "Customer Feedback Form",
+  "campaignId": "cmp_...",
+  "isActive": true,
+  "fields": [...],
+  "campaign": {
+    "id": "cmp_...",
+    "name": "Google Reviews Campaign"
+  }
+}
+```
+
+#### List All Forms
+
+```bash
+curl -X GET "http://localhost:3000/api/forms?page=1&limit=20&isActive=true" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+#### Get Form by Campaign (Public)
+
+```bash
+# This endpoint is public - used to render the form
+curl -X GET http://localhost:3000/api/forms/campaign/CAMPAIGN_ID
+```
+
+#### Submit a Form (Public)
+
+```bash
+curl -X POST http://localhost:3000/api/forms/FORM_ID/submit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "Name": "John Doe",
+      "Email": "john@example.com",
+      "Rating": "5",
+      "Feedback": "Great service!"
+    }
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "Thank you for your feedback!",
+  "redirectUrl": "https://yourwebsite.com/thanks",
+  "submissionId": "sub_..."
+}
+```
+
+#### Get Form Submissions
+
+```bash
+curl -X GET "http://localhost:3000/api/forms/FORM_ID/submissions?page=1&limit=50" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Expected Response:**
+```json
+{
+  "data": [
+    {
+      "id": "sub_...",
+      "formId": "frm_...",
+      "data": {
+        "Name": "John Doe",
+        "Email": "john@example.com",
+        "Rating": "5",
+        "Feedback": "Great service!"
+      },
+      "submittedAt": "2024-01-15T10:30:00Z",
+      "customer": {
+        "id": "cust_...",
+        "name": "John Doe",
+        "email": "john@example.com"
+      }
+    }
+  ],
+  "meta": {
+    "total": 42,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 1
+  }
+}
+```
+
+#### Update a Form
+
+```bash
+curl -X PATCH http://localhost:3000/api/forms/FORM_ID \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "isActive": false
+  }'
+```
+
+#### Delete a Form
+
+```bash
+curl -X DELETE http://localhost:3000/api/forms/FORM_ID \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+### 9. Health Check & Monitoring
+
+#### Basic Health Check
+
+```bash
+curl http://localhost:3000/health
+```
+
+**Expected Response:**
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "uptime": 3600.5,
+  "environment": "development",
+  "version": "1.0.0"
+}
+```
+
+#### Detailed Health Check
+
+```bash
+curl http://localhost:3000/health/detailed
+```
+
+**Expected Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "uptime": 3600.5,
+  "environment": "development",
+  "version": "1.0.0",
+  "checks": {
+    "database": {
+      "status": "healthy",
+      "latency": "5ms",
+      "stats": {
+        "users": 42,
+        "campaigns": 15,
+        "scans": 1234
+      }
+    },
+    "redis": {
+      "status": "healthy",
+      "latency": "2ms",
+      "stats": {
+        "totalConnections": "100",
+        "totalCommands": "5000"
+      }
+    },
+    "queues": {
+      "status": "healthy",
+      "queues": {
+        "scanLogs": {
+          "name": "scan-logs",
+          "waiting": 0,
+          "active": 0,
+          "completed": 1000,
+          "failed": 2,
+          "delayed": 0,
+          "total": 1002
+        },
+        "printJobs": {
+          "name": "print-jobs",
+          "waiting": 0,
+          "active": 1,
+          "completed": 50,
+          "failed": 0,
+          "delayed": 0,
+          "total": 51
+        },
+        "emails": {
+          "name": "emails",
+          "waiting": 5,
+          "active": 0,
+          "completed": 200,
+          "failed": 1,
+          "delayed": 0,
+          "total": 206
+        }
+      }
+    }
+  },
+  "memory": {
+    "used": 120,
+    "total": 256,
+    "unit": "MB"
+  }
+}
+```
+
+#### Readiness Probe (Kubernetes)
+
+```bash
+curl http://localhost:3000/health/ready
+```
+
+**Use case:** Check if the service is ready to accept traffic (database and Redis are accessible)
+
+#### Liveness Probe (Kubernetes)
+
+```bash
+curl http://localhost:3000/health/live
+```
+
+**Use case:** Check if the service process is alive
 
 ## Troubleshooting
 
