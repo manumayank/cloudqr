@@ -86,7 +86,7 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          <Card padding="lg">
+          <Card padding="lg" data-testid="stat-card">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Total Scans</p>
@@ -103,7 +103,7 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          <Card padding="lg">
+          <Card padding="lg" data-testid="stat-card">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Active Campaigns</p>
@@ -119,7 +119,7 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          <Card padding="lg">
+          <Card padding="lg" data-testid="stat-card">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Scans Today</p>
@@ -174,7 +174,7 @@ export default function DashboardPage() {
             <div className="grid gap-6">
               {campaigns.map((campaign) => (
                 <Link key={campaign.id} href={`/dashboard/campaigns/${campaign.id}`}>
-                  <Card padding="lg" hover>
+                  <Card padding="lg" hover data-testid="campaign-card">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4 flex-1">
                         <div className="text-4xl">{getCampaignIcon(campaign.type)}</div>
