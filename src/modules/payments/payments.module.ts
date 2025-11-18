@@ -5,9 +5,14 @@ import { PaymentsService } from './payments.service';
 
 @Module({
   imports: [
-    BullModule.registerQueue({
-      name: 'print-jobs',
-    }),
+    BullModule.registerQueue(
+      {
+        name: 'print-jobs',
+      },
+      {
+        name: 'emails',
+      },
+    ),
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],

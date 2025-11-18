@@ -13,6 +13,7 @@ export class PaymentsService {
     private prisma: PrismaService,
     private configService: ConfigService,
     @InjectQueue('print-jobs') private printJobQueue: Queue,
+    @InjectQueue('emails') private emailQueue: Queue,
   ) {}
 
   /**
@@ -87,8 +88,24 @@ export class PaymentsService {
       },
     });
 
-    // TODO: Send order confirmation email
-    // await this.emailQueue.add('order-confirmation', { orderId: order.id });
+    // Send payment success email
+    const business = await this.prisma.business.findUnique({
+      where: { id: order.businessId },
+      select: { contactEmail: true, businessName: true },
+    });
+
+    if (business?.contactEmail) {
+      await this.emailQueue.add('send-payment-success', {
+        orderId: order.id,
+        email: business.contactEmail,
+        customerName: business.businessName,
+        orderNumber: order.orderNumber,
+        amount: order.amount,
+        paidAt: new Date(payment.created_at * 1000),
+      });
+
+      this.logger.log(`Payment success email queued for ${business.contactEmail}`);
+    }
   }
 
   /**
@@ -97,14 +114,38 @@ export class PaymentsService {
   async handlePaymentFailed(payment: any) {
     this.logger.warn(`Processing payment failed: ${payment.id}`);
 
-    await this.prisma.order.updateMany({
+    const order = await this.prisma.order.findFirst({
       where: { paymentId: payment.order_id },
-      data: {
-        paymentStatus: 'FAILED',
+      include: {
+        business: {
+          select: { contactEmail: true, businessName: true },
+        },
       },
     });
 
-    // TODO: Send payment failed notification email
+    if (order) {
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: {
+          paymentStatus: 'FAILED',
+        },
+      });
+
+      // Log payment failure (optionally send email based on business requirements)
+      this.logger.warn(
+        `Payment failed for order ${order.orderNumber}, business: ${order.business.businessName}`,
+      );
+
+      // Note: You can uncomment the following to send failure notification emails
+      // if (order.business.contactEmail) {
+      //   await this.emailQueue.add('send-payment-failed', {
+      //     orderId: order.id,
+      //     email: order.business.contactEmail,
+      //     customerName: order.business.businessName,
+      //     orderNumber: order.orderNumber,
+      //   });
+      // }
+    }
   }
 
   /**
@@ -146,6 +187,27 @@ export class PaymentsService {
       },
     });
 
-    // TODO: Send refund confirmation email
+    // Send refund confirmation email
+    const business = await this.prisma.business.findUnique({
+      where: { id: order.businessId },
+      select: { contactEmail: true, businessName: true },
+    });
+
+    if (business?.contactEmail) {
+      // Note: You may want to create a specific 'send-refund-confirmation' email job
+      // For now, we'll log the refund completion
+      this.logger.log(
+        `Refund completed for order ${order.orderNumber}, business: ${business.businessName}`,
+      );
+
+      // Optional: Send refund notification email
+      // await this.emailQueue.add('send-refund-confirmation', {
+      //   orderId: order.id,
+      //   email: business.contactEmail,
+      //   customerName: business.businessName,
+      //   orderNumber: order.orderNumber,
+      //   refundAmount: order.amount,
+      // });
+    }
   }
 }

@@ -1,14 +1,12 @@
 import { Module } from '@nestjs/common';
+import { AdminController } from './admin.controller';
+import { AdminService } from './admin.service';
+import { PrismaModule } from '../../common/prisma/prisma.module';
 
 @Module({
-  // TODO: Implement admin module
-  //
-  // Endpoints (all require ADMIN role):
-  // - GET /admin/businesses - List all businesses
-  // - GET /admin/orders - List all orders
-  // - GET /admin/stats - System-wide statistics
-  // - PATCH /admin/businesses/:id - Update business (activate/deactivate)
-  //
-  // Use RolesGuard to restrict access
+  imports: [PrismaModule],
+  controllers: [AdminController],
+  providers: [AdminService],
+  exports: [AdminService],
 })
 export class AdminModule {}
