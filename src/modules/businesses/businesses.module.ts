@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
+import { BusinessesController } from './businesses.controller';
+import { BusinessesService } from './businesses.service';
+import { PrismaModule } from '../../common/prisma/prisma.module';
 
 @Module({
-  // TODO: Implement businesses module
-  // - GET /businesses/:id - Get business details
-  // - PUT /businesses/:id - Update business
-  // - POST /businesses/:id/logo - Upload logo
+  imports: [PrismaModule],
+  controllers: [BusinessesController],
+  providers: [BusinessesService],
+  exports: [BusinessesService],
 })
 export class BusinessesModule {}

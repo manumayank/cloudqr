@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
+import { QRCodesController } from './qr-codes.controller';
+import { QRCodesService } from './qr-codes.service';
+import { PrismaModule } from '../../common/prisma/prisma.module';
 
 @Module({
-  // TODO: Implement QR codes module
-  // - GET /qr/:id - Get QR code details
-  // - PUT /qr/:id - Update QR code settings
-  // - POST /qr/:id/activate - Activate QR code
-  // - POST /qr/:id/deactivate - Deactivate QR code
+  imports: [PrismaModule],
+  controllers: [QRCodesController],
+  providers: [QRCodesService],
+  exports: [QRCodesService],
 })
 export class QrCodesModule {}
