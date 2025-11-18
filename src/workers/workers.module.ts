@@ -2,9 +2,8 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ScanLoggerWorker } from './scan-logger.worker';
 import { PrintJobWorker } from './print-job.worker';
+import { EmailWorker } from './email.worker';
 import { PrismaModule } from '../common/prisma/prisma.module';
-// TODO: Add more workers:
-// - EmailWorker (emails queue)
 
 @Module({
   imports: [
@@ -15,6 +14,6 @@ import { PrismaModule } from '../common/prisma/prisma.module';
     ),
     PrismaModule,
   ],
-  providers: [ScanLoggerWorker, PrintJobWorker],
+  providers: [ScanLoggerWorker, PrintJobWorker, EmailWorker],
 })
 export class WorkersModule {}

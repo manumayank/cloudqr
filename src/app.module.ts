@@ -21,6 +21,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { PrintJobsModule } from './modules/print-jobs/print-jobs.module';
 import { FormsModule } from './modules/forms/forms.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { HealthModule } from './modules/health/health.module';
 
 // Workers
 import { WorkersModule } from './workers/workers.module';
@@ -78,6 +79,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     PrintJobsModule,
     FormsModule,
     AdminModule,
+    HealthModule,
 
     // Workers
     WorkersModule,

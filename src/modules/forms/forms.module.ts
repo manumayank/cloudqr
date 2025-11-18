@@ -1,18 +1,12 @@
 import { Module } from '@nestjs/common';
+import { FormsController } from './forms.controller';
+import { FormsService } from './forms.service';
+import { PrismaModule } from '../../common/prisma/prisma.module';
 
 @Module({
-  // TODO: Implement forms module
-  //
-  // Endpoints:
-  // - POST /campaigns/:id/forms - Create form
-  // - GET /forms/:id - Get form definition (public)
-  // - POST /forms/:id/submit - Submit form (public, rate-limited)
-  // - GET /forms/:id/submissions - List submissions
-  //
-  // Features:
-  // - JSON Schema based form definitions
-  // - Validation against schema
-  // - Rate limiting (5 submissions/IP/hour)
-  // - Customer data extraction
+  imports: [PrismaModule],
+  controllers: [FormsController],
+  providers: [FormsService],
+  exports: [FormsService],
 })
 export class FormsModule {}
