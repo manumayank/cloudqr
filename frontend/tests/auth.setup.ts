@@ -14,6 +14,32 @@ setup('authenticate', async ({ page }) => {
 
   console.log(`Setting up test user: ${testEmail}`);
 
+  // Mock authentication API endpoints
+  await page.route('**/auth/register', async (route) => {
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: {
+          id: '1',
+          email: testEmail,
+          businessName: 'Test Business Inc',
+          phone: '+91 98765 43210',
+        },
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+      }),
+    });
+  });
+
+  await page.route('**/campaigns', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    });
+  });
+
   await page.goto('/login');
 
   // Switch to signup tab if it exists

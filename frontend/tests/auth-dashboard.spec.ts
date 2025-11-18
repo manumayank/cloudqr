@@ -10,6 +10,52 @@ const randomEmail = () =>
   `test+${Date.now()}_${Math.floor(Math.random() * 1_000_000)}@qrconnect.test`;
 
 test.describe('Authentication Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock API endpoints
+    await page.route('**/auth/register', async (route) => {
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          user: { id: '1', email: 'test@example.com', businessName: 'Test Business' },
+          accessToken: 'mock-access-token',
+          refreshToken: 'mock-refresh-token',
+        }),
+      });
+    });
+
+    await page.route('**/auth/login', async (route) => {
+      const request = route.request();
+      const postData = request.postDataJSON();
+
+      if (postData?.email === 'invalid@example.com') {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Invalid credentials' }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            user: { id: '1', email: postData?.email, businessName: 'Test Business' },
+            accessToken: 'mock-access-token',
+            refreshToken: 'mock-refresh-token',
+          }),
+        });
+      }
+    });
+
+    await page.route('**/campaigns', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+  });
+
   test('unauthenticated user is redirected to login from /dashboard', async ({ page }) => {
     // Clear any existing auth
     await page.context().clearCookies();
@@ -60,6 +106,17 @@ test.describe('Authentication Flow', () => {
 });
 
 test.describe('Dashboard Functionality', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock API endpoints
+    await page.route('**/campaigns', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+  });
+
   test('dashboard shows empty state for new users', async ({ page }) => {
     const dashboard = new DashboardPage(page);
     await dashboard.goto();

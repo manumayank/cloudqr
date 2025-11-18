@@ -8,10 +8,6 @@
     --font-poppins: 'Poppins', system-ui, sans-serif;
   }
 
-  * {
-    @apply border-border;
-  }
-
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
   }

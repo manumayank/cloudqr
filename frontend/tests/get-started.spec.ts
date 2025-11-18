@@ -9,6 +9,37 @@ import { CheckoutPage } from './pages/CheckoutPage';
  */
 
 test.describe('Get Started Wizard Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock API endpoints that might be called
+    await page.route('**/campaigns', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    await page.route('**/orders', async (route) => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'order-123',
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+      }
+    });
+  });
+
   test('complete flow from landing to checkout', async ({ page }) => {
     // 1. Start from landing page
     await page.goto('/');

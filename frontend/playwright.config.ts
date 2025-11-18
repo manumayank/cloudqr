@@ -40,6 +40,15 @@ export default defineConfig({
 
     /* Maximum time each action can take */
     actionTimeout: 10_000,
+
+    /* Launch options for Chromium - disable sandboxing for Docker/restricted environments */
+    launchOptions: {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+      ],
+    },
   },
 
   /* Global timeout for each test */
