@@ -1,0 +1,448 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER MANAGEMENT & AUTHENTICATION
+// ============================================================================
+
+enum UserRole {
+  ADMIN
+  BUSINESS_OWNER
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  name          String
+  role          UserRole  @default(BUSINESS_OWNER)
+  isActive      Boolean   @default(true) @map("is_active")
+  emailVerified Boolean   @default(false) @map("email_verified")
+  phone         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+
+  // Relations
+  businesses    Business[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  createdAt DateTime @default(now()) @map("created_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// BUSINESS & MULTI-TENANCY
+// ============================================================================
+
+enum BusinessCategory {
+  ECOMMERCE
+  RESTAURANT
+  OTHER
+}
+
+model Business {
+  id           String           @id @default(uuid())
+  ownerId      String           @map("owner_id")
+  businessName String           @map("business_name")
+  category     BusinessCategory
+  contactPhone String?          @map("contact_phone")
+  contactEmail String?          @map("contact_email")
+  address      String?
+  city         String?
+  state        String?
+  pincode      String?
+  logoUrl      String?          @map("logo_url")
+  isActive     Boolean          @default(true) @map("is_active")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+  orders    Order[]
+  forms     Form[]
+  customers Customer[]
+
+  @@index([ownerId])
+  @@index([category])
+  @@map("businesses")
+}
+
+// ============================================================================
+// CAMPAIGNS & QR CODES
+// ============================================================================
+
+enum CampaignUseCase {
+  REVIEW
+  FEEDBACK
+  WHATSAPP
+  OFFER
+  CUSTOM_LINK
+  MENU
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model Campaign {
+  id          String          @id @default(uuid())
+  businessId  String          @map("business_id")
+  name        String
+  description String?
+  useCase     CampaignUseCase @map("use_case")
+  status      CampaignStatus  @default(DRAFT)
+  startDate   DateTime?       @map("start_date")
+  endDate     DateTime?       @map("end_date")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  business  Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  qrCodes   QRCode[]
+  scans     Scan[]
+  orders    Order[]
+  printJobs PrintJob[]
+
+  @@index([businessId])
+  @@index([status])
+  @@index([useCase])
+  @@map("campaigns")
+}
+
+enum QRCodeType {
+  SINGLE_DYNAMIC
+  BATCH
+}
+
+enum TargetMode {
+  DIRECT_LINK
+  WHATSAPP
+  GOOGLE_REVIEW
+  FORM
+  CUSTOM_FLOW
+}
+
+model QRCode {
+  id         String     @id @default(uuid())
+  campaignId String     @map("campaign_id")
+  slug       String     @unique
+  codeType   QRCodeType @default(SINGLE_DYNAMIC) @map("code_type")
+  targetMode TargetMode @map("target_mode")
+  isActive   Boolean    @default(true) @map("is_active")
+  metadata   Json?
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  campaign        Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  redirectRules   RedirectRule[]
+  scans           Scan[]
+  formSubmissions FormSubmission[]
+
+  @@index([slug])
+  @@index([campaignId])
+  @@index([isActive])
+  @@map("qr_codes")
+}
+
+model RedirectRule {
+  id        String    @id @default(uuid())
+  qrCodeId  String    @map("qr_code_id")
+  targetUrl String    @map("target_url")
+  metadata  Json?
+  isDefault Boolean   @default(true) @map("is_default")
+  validFrom DateTime? @map("valid_from")
+  validTo   DateTime? @map("valid_to")
+  priority  Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  qrCode QRCode @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+
+  @@index([qrCodeId])
+  @@index([isDefault])
+  @@index([validFrom, validTo])
+  @@map("redirect_rules")
+}
+
+// ============================================================================
+// SCAN ANALYTICS
+// ============================================================================
+
+enum DeviceType {
+  MOBILE
+  TABLET
+  DESKTOP
+  OTHER
+}
+
+model Scan {
+  id         String      @id @default(uuid())
+  qrCodeId   String      @map("qr_code_id")
+  campaignId String      @map("campaign_id")
+  businessId String      @map("business_id")
+  scannedAt  DateTime    @default(now()) @map("scanned_at")
+  ipAddress  String?     @map("ip_address")
+  userAgent  String?     @map("user_agent")
+  deviceType DeviceType? @map("device_type")
+  browser    String?
+  os         String?
+  geoCity    String?     @map("geo_city")
+  geoState   String?     @map("geo_state")
+  geoCountry String?     @default("IN") @map("geo_country")
+  latitude   Float?
+  longitude  Float?
+  referrer   String?
+
+  // Relations
+  qrCode   QRCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([qrCodeId])
+  @@index([campaignId])
+  @@index([businessId])
+  @@index([scannedAt])
+  @@index([deviceType])
+  @@index([geoCity])
+  @@map("scans")
+}
+
+// ============================================================================
+// ORDERS & PRINT JOBS
+// ============================================================================
+
+enum ProductType {
+  BUSINESS_CARD
+  STICKER_SMALL
+  STICKER_MEDIUM
+  STICKER_LARGE
+  CUSTOM
+}
+
+enum OrderStatus {
+  PENDING
+  PAYMENT_PENDING
+  PAID
+  IN_PRODUCTION
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  businessId      String        @map("business_id")
+  campaignId      String?       @map("campaign_id")
+  orderNumber     String        @unique @map("order_number")
+  quantity        Int
+  productType     ProductType   @map("product_type")
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
+  amount          Int
+  currency        String        @default("INR")
+  paymentId       String?       @map("payment_id")
+  paymentMethod   String?       @map("payment_method")
+  shippingAddress String?       @map("shipping_address")
+  shippingCity    String?       @map("shipping_city")
+  shippingState   String?       @map("shipping_state")
+  shippingPincode String?       @map("shipping_pincode")
+  trackingNumber  String?       @map("tracking_number")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  paidAt          DateTime?     @map("paid_at")
+  shippedAt       DateTime?     @map("shipped_at")
+  deliveredAt     DateTime?     @map("delivered_at")
+
+  // Relations
+  business  Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  campaign  Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  printJobs PrintJob[]
+
+  @@index([businessId])
+  @@index([campaignId])
+  @@index([orderNumber])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+enum PrintJobStatus {
+  PENDING
+  QUEUED
+  PRINTING
+  COMPLETED
+  ERROR
+  CANCELLED
+}
+
+model PrintJob {
+  id                String         @id @default(uuid())
+  orderId           String         @map("order_id")
+  campaignId        String         @map("campaign_id")
+  status            PrintJobStatus @default(PENDING)
+  impositionFileUrl String?        @map("imposition_file_url")
+  impositionData    Json?          @map("imposition_data")
+  sheetCount        Int?           @map("sheet_count")
+  qrCodesGenerated  Int?           @map("qr_codes_generated")
+  errorMessage      String?        @map("error_message")
+  startedAt         DateTime?      @map("started_at")
+  completedAt       DateTime?      @map("completed_at")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  notes             String?
+
+  // Relations
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("print_jobs")
+}
+
+// ============================================================================
+// FORMS & FEEDBACK
+// ============================================================================
+
+model Form {
+  id          String   @id @default(uuid())
+  businessId  String   @map("business_id")
+  campaignId  String?  @map("campaign_id")
+  name        String
+  description String?
+  schema      Json
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  business    Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  submissions FormSubmission[]
+
+  @@index([businessId])
+  @@index([campaignId])
+  @@map("forms")
+}
+
+model FormSubmission {
+  id          String   @id @default(uuid())
+  formId      String   @map("form_id")
+  qrCodeId    String?  @map("qr_code_id")
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  payload     Json
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+
+  // Relations
+  form   Form    @relation(fields: [formId], references: [id], onDelete: Cascade)
+  qrCode QRCode? @relation(fields: [qrCodeId], references: [id], onDelete: SetNull)
+
+  @@index([formId])
+  @@index([qrCodeId])
+  @@index([submittedAt])
+  @@map("form_submissions")
+}
+
+// ============================================================================
+// CUSTOMERS
+// ============================================================================
+
+model Customer {
+  id               String   @id @default(uuid())
+  businessId       String   @map("business_id")
+  name             String?
+  phone            String?
+  email            String?
+  sourceCampaignId String?  @map("source_campaign_id")
+  sourceQrId       String?  @map("source_qr_id")
+  metadata         Json?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([phone])
+  @@index([email])
+  @@map("customers")
+}
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+enum AuditAction {
+  USER_LOGIN
+  USER_LOGOUT
+  BUSINESS_CREATED
+  CAMPAIGN_CREATED
+  CAMPAIGN_UPDATED
+  ORDER_CREATED
+  ORDER_PAID
+  PRINT_JOB_COMPLETED
+  SETTINGS_UPDATED
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  userId     String?     @map("user_id")
+  businessId String?     @map("business_id")
+  action     AuditAction
+  entityType String?     @map("entity_type")
+  entityId   String?     @map("entity_id")
+  metadata   Json?
+  ipAddress  String?     @map("ip_address")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([businessId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
